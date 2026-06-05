@@ -74,6 +74,22 @@ npm test
 | Instagram 4:5 | 1080 × 1350 |
 | Story 9:16 | 1080 × 1920 |
 
+## Deployment
+
+SnapStudio is hosted at **[https://snapstudio.prince.sh](https://snapstudio.prince.sh)** — a static SPA served by nginx. No backend is required; all editing runs in the browser.
+
+```bash
+# Build and deploy to the server
+./scripts/deploy.sh
+
+# Enable HTTPS after DNS A record points to the server
+./scripts/setup-ssl-when-ready.sh
+```
+
+## Repository
+
+[github.com/princejain756/SnapStudio](https://github.com/princejain756/SnapStudio)
+
 ## License
 
 MIT
