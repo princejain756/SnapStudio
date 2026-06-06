@@ -1,5 +1,6 @@
 export type Tool =
   | 'select'
+  | 'crop'
   | 'text'
   | 'arrow'
   | 'line'
@@ -10,7 +11,7 @@ export type Tool =
 
 export type Annotation = {
   id: string
-  type: Tool
+  type: Exclude<Tool, 'select' | 'crop'>
   x: number
   y: number
   x2?: number
@@ -79,17 +80,21 @@ export type CropState = {
   height: number
 }
 
-export type EditorState = {
-  image: HTMLImageElement | null
-  imageInfo: ImageInfo | null
-  activeTool: Tool
-  annotations: Annotation[]
-  selectedId: string | null
+export type EditorSnapshot = {
   filters: FilterState
+  background: BackgroundState
+  annotations: Annotation[]
   canvasWidth: number
   canvasHeight: number
   crop: CropState | null
-  background: BackgroundState
+}
+
+export type ProjectFile = {
+  version: 1
+  fileName: string
+  imageWidth: number
+  imageHeight: number
+  snapshot: EditorSnapshot
   exportSettings: ExportSettings
 }
 

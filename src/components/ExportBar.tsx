@@ -1,6 +1,13 @@
 import { Download } from 'lucide-react'
 import type { ExportFormat, ExportSettings } from '../types'
 
+const EXPORT_PRESETS: { label: string; format: ExportFormat; scale: number; quality: number }[] = [
+  { label: 'Web PNG', format: 'png', scale: 1, quality: 0.92 },
+  { label: 'Web JPEG', format: 'jpeg', scale: 1, quality: 0.85 },
+  { label: 'Social 2×', format: 'png', scale: 2, quality: 0.92 },
+  { label: 'Thumb 0.5×', format: 'webp', scale: 0.5, quality: 0.8 },
+]
+
 type ExportBarProps = {
   exportSettings: ExportSettings
   onExportSettingsChange: (settings: ExportSettings) => void
@@ -24,17 +31,25 @@ export function ExportBar({
   return (
     <footer className="export-bar">
       <div className="export-bar__controls">
+        <div className="export-bar__presets">
+          {EXPORT_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              className="preset-chip"
+              disabled={!hasImage}
+              onClick={() => onExportSettingsChange({ format: p.format, scale: p.scale, quality: p.quality })}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         <div className="export-bar__group">
           <label htmlFor="format-select">Format</label>
           <select
             id="format-select"
             value={exportSettings.format}
-            onChange={(e) =>
-              onExportSettingsChange({
-                ...exportSettings,
-                format: e.target.value as ExportFormat,
-              })
-            }
+            onChange={(e) => onExportSettingsChange({ ...exportSettings, format: e.target.value as ExportFormat })}
             disabled={!hasImage}
           >
             <option value="png">PNG</option>
@@ -52,17 +67,10 @@ export function ExportBar({
               min={10}
               max={100}
               value={Math.round(exportSettings.quality * 100)}
-              onChange={(e) =>
-                onExportSettingsChange({
-                  ...exportSettings,
-                  quality: Number(e.target.value) / 100,
-                })
-              }
+              onChange={(e) => onExportSettingsChange({ ...exportSettings, quality: Number(e.target.value) / 100 })}
               disabled={!hasImage}
             />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {Math.round(exportSettings.quality * 100)}%
-            </span>
+            <span className="export-bar__value">{Math.round(exportSettings.quality * 100)}%</span>
           </div>
         )}
 
@@ -71,12 +79,7 @@ export function ExportBar({
           <select
             id="scale-select"
             value={exportSettings.scale}
-            onChange={(e) =>
-              onExportSettingsChange({
-                ...exportSettings,
-                scale: Number(e.target.value),
-              })
-            }
+            onChange={(e) => onExportSettingsChange({ ...exportSettings, scale: Number(e.target.value) })}
             disabled={!hasImage}
           >
             <option value={0.5}>0.5×</option>
@@ -88,18 +91,11 @@ export function ExportBar({
         </div>
 
         {hasImage && (
-          <span className="info-chip" style={{ marginLeft: 8 }}>
-            Output: {outputW} × {outputH}
-          </span>
+          <span className="info-chip">Output: {outputW} × {outputH}</span>
         )}
       </div>
 
-      <button
-        className="export-btn"
-        onClick={onExport}
-        disabled={!hasImage}
-        aria-label={`Export as ${exportSettings.format.toUpperCase()}`}
-      >
+      <button className="export-btn" onClick={onExport} disabled={!hasImage} aria-label={`Export as ${exportSettings.format.toUpperCase()}`}>
         <Download />
         Export {exportSettings.format.toUpperCase()}
       </button>

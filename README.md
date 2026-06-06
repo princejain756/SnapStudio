@@ -6,12 +6,18 @@ A privacy-first browser image editor for fast visual edits.
 
 ## Features
 
-- Upload images locally (PNG, JPEG, WebP)
-- Crop and resize with social media presets
-- Add text, arrows, lines, shapes, highlights, and blur/redaction boxes
-- Apply live filters (brightness, contrast, saturation, grayscale, blur, sepia)
-- Create polished social graphics with backgrounds, padding, rounded corners, and shadows
-- Export as PNG, JPEG, or WebP with quality and scale controls
+- Upload images locally (PNG, JPEG, WebP) — drag & drop, click, or **Ctrl+V** paste
+- **Crop tool** with interactive drag on canvas + social resize presets
+- **Select & move** annotations; delete with Del/Backspace
+- Drawing tools: text, arrows, lines, rectangles, circles, highlights, blur/redact
+- Live filters (brightness, contrast, saturation, grayscale, blur, sepia)
+- Background framing: transparent, solid, gradient, padding, radius, shadow
+- **Undo/redo** (50 steps) — Ctrl+Z / Ctrl+Y
+- **Before/after compare** slider — press `\` to toggle
+- **Export presets** — Web PNG, Web JPEG, Social 2×, Thumb 0.5×
+- Export PNG, JPEG, or WebP with quality and scale controls
+- **Save/load project** (`.snapstudio.json`) — settings persist; re-upload image to restore
+- Full **keyboard shortcuts** — press `?` for the cheat sheet
 - No account, no upload, no backend
 
 ## Privacy
@@ -62,6 +68,26 @@ npm test
 - Vite
 - Canvas API
 - Vitest
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| V | Select |
+| C | Crop |
+| T | Text |
+| A | Arrow |
+| L | Line |
+| R | Rectangle |
+| O | Circle |
+| H | Highlight |
+| B | Blur / redact |
+| Del | Delete selected |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+| Ctrl+S | Export |
+| Ctrl+V | Paste image |
+| \\ | Toggle compare |
+| ? | Show shortcuts |
 
 ## Social Presets
 

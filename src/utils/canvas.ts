@@ -4,6 +4,7 @@ import type {
   CropState,
   FilterState,
 } from '../types'
+import { normalizeRect } from './annotations'
 import { buildFilterString } from './filters'
 import { calculateAspectFit } from './presets'
 
@@ -83,14 +84,22 @@ export function drawImageWithFilters(
   shadowBlur: number,
   shadowOpacity: number
 ): void {
-  ctx.save()
+  const { destX, destY, destW, destH, srcX, srcY, srcW, srcH } = rect
+  if (destW <= 0 || destH <= 0) return
 
   const filterStr = buildFilterString(filters)
-  if (filterStr !== 'none') {
-    ctx.filter = filterStr
-  }
 
-  const { destX, destY, destW, destH, srcX, srcY, srcW, srcH } = rect
+  // Draw filtered image to offscreen canvas for reliable filter application
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = Math.max(1, Math.round(destW))
+  tempCanvas.height = Math.max(1, Math.round(destH))
+  const tempCtx = tempCanvas.getContext('2d')
+  if (!tempCtx) return
+
+  tempCtx.filter = filterStr
+  tempCtx.drawImage(image, srcX, srcY, srcW, srcH, 0, 0, destW, destH)
+
+  ctx.save()
 
   if (shadow && borderRadius > 0) {
     ctx.shadowColor = `rgba(0, 0, 0, ${shadowOpacity})`
@@ -104,7 +113,8 @@ export function drawImageWithFilters(
     ctx.clip()
   }
 
-  ctx.drawImage(image, srcX, srcY, srcW, srcH, destX, destY, destW, destH)
+  ctx.filter = 'none'
+  ctx.drawImage(tempCanvas, destX, destY, destW, destH)
   ctx.restore()
 }
 
@@ -151,23 +161,23 @@ export function drawAnnotation(
       break
     }
     case 'rectangle': {
-      const w = annotation.width ?? 0
-      const h = annotation.height ?? 0
+      const { x, y, width: w, height: h } = normalizeRect(annotation)
+      if (w < 1 || h < 1) break
       if (annotation.filled) {
         ctx.globalAlpha = 0.3
-        ctx.fillRect(annotation.x, annotation.y, w, h)
+        ctx.fillRect(x, y, w, h)
         ctx.globalAlpha = 1
       }
-      ctx.strokeRect(annotation.x, annotation.y, w, h)
+      ctx.strokeRect(x, y, w, h)
       break
     }
     case 'circle': {
-      const w = annotation.width ?? 0
-      const h = annotation.height ?? 0
-      const cx = annotation.x + w / 2
-      const cy = annotation.y + h / 2
-      const rx = Math.abs(w) / 2
-      const ry = Math.abs(h) / 2
+      const { x, y, width: w, height: h } = normalizeRect(annotation)
+      if (w < 1 || h < 1) break
+      const cx = x + w / 2
+      const cy = y + h / 2
+      const rx = w / 2
+      const ry = h / 2
       ctx.beginPath()
       ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
       if (annotation.filled) {
@@ -179,11 +189,11 @@ export function drawAnnotation(
       break
     }
     case 'highlight': {
-      const w = annotation.width ?? 0
-      const h = annotation.height ?? 0
-      ctx.globalAlpha = 0.35
+      const { x, y, width: w, height: h } = normalizeRect(annotation)
+      if (w < 1 || h < 1) break
+      ctx.globalAlpha = 0.4
       ctx.fillStyle = annotation.color
-      ctx.fillRect(annotation.x, annotation.y, w, h)
+      ctx.fillRect(x, y, w, h)
       ctx.globalAlpha = 1
       break
     }
@@ -205,8 +215,17 @@ export function drawAnnotation(
       )
       break
     }
-    case 'blur':
+    case 'blur': {
+      if (isSelected) break
+      const { x, y, width: w, height: h } = normalizeRect(annotation)
+      if (w < 1 || h < 1) break
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 4])
+      ctx.strokeRect(x, y, w, h)
+      ctx.setLineDash([])
       break
+    }
   }
 
   if (isSelected) {
@@ -276,6 +295,55 @@ function drawArrow(
   ctx.fill()
 }
 
+function blurRegion(
+  ctx: CanvasRenderingContext2D,
+  source: HTMLCanvasElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius: number
+): void {
+  const iw = Math.round(w)
+  const ih = Math.round(h)
+  if (iw < 2 || ih < 2) return
+
+  const src = document.createElement('canvas')
+  src.width = iw
+  src.height = ih
+  const srcCtx = src.getContext('2d')
+  if (!srcCtx) return
+  srcCtx.drawImage(source, x, y, w, h, 0, 0, iw, ih)
+
+  const blurred = document.createElement('canvas')
+  blurred.width = iw
+  blurred.height = ih
+  const blurCtx = blurred.getContext('2d')
+  if (!blurCtx) return
+
+  blurCtx.filter = `blur(${radius}px)`
+  blurCtx.drawImage(src, 0, 0, iw, ih)
+
+  // Pixelate pass for stronger redaction
+  const pixelSize = Math.max(6, Math.round(radius / 2))
+  const small = document.createElement('canvas')
+  small.width = Math.max(1, Math.floor(iw / pixelSize))
+  small.height = Math.max(1, Math.floor(ih / pixelSize))
+  const smallCtx = small.getContext('2d')
+  if (!smallCtx) return
+  smallCtx.drawImage(blurred, 0, 0, small.width, small.height)
+
+  blurCtx.filter = 'none'
+  blurCtx.clearRect(0, 0, iw, ih)
+  blurCtx.imageSmoothingEnabled = false
+  blurCtx.drawImage(small, 0, 0, small.width, small.height, 0, 0, iw, ih)
+
+  ctx.save()
+  ctx.filter = 'none'
+  ctx.drawImage(blurred, x, y, w, h)
+  ctx.restore()
+}
+
 export function applyBlurRegions(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
@@ -285,27 +353,9 @@ export function applyBlurRegions(
   if (blurBoxes.length === 0) return
 
   blurBoxes.forEach((ann) => {
-    const x = Math.min(ann.x, ann.x + (ann.width ?? 0))
-    const y = Math.min(ann.y, ann.y + (ann.height ?? 0))
-    const w = Math.abs(ann.width ?? 0)
-    const h = Math.abs(ann.height ?? 0)
-    if (w < 2 || h < 2) return
-
-    const radius = ann.blurRadius ?? 12
-    const tempCanvas = document.createElement('canvas')
-    tempCanvas.width = w
-    tempCanvas.height = h
-    const tempCtx = tempCanvas.getContext('2d')
-    if (!tempCtx) return
-
-    tempCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h)
-    tempCtx.filter = `blur(${radius}px)`
-    tempCtx.drawImage(tempCanvas, 0, 0)
-
-    ctx.save()
-    ctx.filter = 'none'
-    ctx.drawImage(tempCanvas, x, y)
-    ctx.restore()
+    const { x, y, width: w, height: h } = normalizeRect(ann)
+    if (w < 4 || h < 4) return
+    blurRegion(ctx, canvas, x, y, w, h, ann.blurRadius ?? 20)
   })
 }
 
@@ -343,11 +393,16 @@ export function renderCanvas(
     background.shadowOpacity
   )
 
-  applyBlurRegions(ctx, canvas, annotations)
+  const snapshot = document.createElement('canvas')
+  snapshot.width = canvasWidth
+  snapshot.height = canvasHeight
+  const snapCtx = snapshot.getContext('2d')
+  if (snapCtx) {
+    snapCtx.drawImage(canvas, 0, 0)
+    applyBlurRegions(ctx, snapshot, annotations)
+  }
 
-  annotations
-    .filter((a) => a.type !== 'blur')
-    .forEach((ann) => {
-      drawAnnotation(ctx, ann, ann.id === selectedId)
-    })
+  annotations.forEach((ann) => {
+    drawAnnotation(ctx, ann, ann.id === selectedId)
+  })
 }

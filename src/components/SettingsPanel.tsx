@@ -1,22 +1,17 @@
-import { useDebouncedCallback } from 'use-debounce'
-import type {
-  Annotation,
-  BackgroundState,
-  BackgroundType,
-  FilterState,
-} from '../types'
+import type { Annotation, BackgroundState, BackgroundType, FilterState } from '../types'
 import { CANVAS_PRESETS, getPresetDimensions } from '../utils/presets'
 
 type SettingsPanelProps = {
   filters: FilterState
-  onFiltersChange: (filters: FilterState) => void
+  onFilterChange: (key: keyof FilterState, value: number) => void
+  onFilterCommit: () => void
   canvasWidth: number
   canvasHeight: number
   onDimensionsChange: (width: number, height: number) => void
   imageWidth: number
   imageHeight: number
   background: BackgroundState
-  onBackgroundChange: (bg: BackgroundState) => void
+  onBackgroundChange: (updates: Partial<BackgroundState>) => void
   selectedAnnotation: Annotation | null
   onAnnotationChange: (id: string, updates: Partial<Annotation>) => void
   toolColor: string
@@ -33,7 +28,8 @@ type SettingsPanelProps = {
 
 export function SettingsPanel({
   filters,
-  onFiltersChange,
+  onFilterChange,
+  onFilterCommit,
   canvasWidth,
   canvasHeight,
   onDimensionsChange,
@@ -54,13 +50,6 @@ export function SettingsPanel({
   activePreset,
   onPresetChange,
 }: SettingsPanelProps) {
-  const debouncedFilterChange = useDebouncedCallback(
-    (key: keyof FilterState, value: number) => {
-      onFiltersChange({ ...filters, [key]: value })
-    },
-    16
-  )
-
   const handlePreset = (label: string) => {
     onPresetChange(label)
     const preset = CANVAS_PRESETS.find((p) => p.label === label)!
@@ -135,14 +124,16 @@ export function SettingsPanel({
               min={min}
               max={max}
               value={filters[key]}
-              onChange={(e) => debouncedFilterChange(key, Number(e.target.value))}
+              onChange={(e) => onFilterChange(key, Number(e.target.value))}
+              onMouseUp={onFilterCommit}
+              onTouchEnd={onFilterCommit}
               aria-label={label}
             />
             {filters[key] !== def && (
               <button
                 className="secondary-btn"
                 style={{ marginTop: 4, fontSize: '0.65rem', padding: '2px 8px' }}
-                onClick={() => onFiltersChange({ ...filters, [key]: def })}
+                onClick={() => onFilterChange(key, def)}
               >
                 Reset
               </button>
@@ -158,7 +149,7 @@ export function SettingsPanel({
             <button
               key={type}
               className={`bg-type-btn ${background.type === type ? 'bg-type-btn--active' : ''}`}
-              onClick={() => onBackgroundChange({ ...background, type })}
+              onClick={() => onBackgroundChange({ type })}
             >
               {type.charAt(0).toUpperCase() + type.slice(1)}
             </button>
@@ -171,9 +162,7 @@ export function SettingsPanel({
             <input
               type="color"
               value={background.color}
-              onChange={(e) =>
-                onBackgroundChange({ ...background, color: e.target.value })
-              }
+              onChange={(e) => onBackgroundChange({ color: e.target.value })}
             />
           </div>
         )}
@@ -185,9 +174,7 @@ export function SettingsPanel({
               <input
                 type="color"
                 value={background.gradientStart}
-                onChange={(e) =>
-                  onBackgroundChange({ ...background, gradientStart: e.target.value })
-                }
+                onChange={(e) => onBackgroundChange({ gradientStart: e.target.value })}
               />
             </div>
             <div className="color-row">
@@ -195,9 +182,7 @@ export function SettingsPanel({
               <input
                 type="color"
                 value={background.gradientEnd}
-                onChange={(e) =>
-                  onBackgroundChange({ ...background, gradientEnd: e.target.value })
-                }
+                onChange={(e) => onBackgroundChange({ gradientEnd: e.target.value })}
               />
             </div>
             <div className="slider-group">
@@ -211,10 +196,7 @@ export function SettingsPanel({
                 max={360}
                 value={background.gradientAngle}
                 onChange={(e) =>
-                  onBackgroundChange({
-                    ...background,
-                    gradientAngle: Number(e.target.value),
-                  })
+                  onBackgroundChange({ gradientAngle: Number(e.target.value) })
                 }
               />
             </div>
@@ -231,9 +213,7 @@ export function SettingsPanel({
             min={0}
             max={200}
             value={background.padding}
-            onChange={(e) =>
-              onBackgroundChange({ ...background, padding: Number(e.target.value) })
-            }
+            onChange={(e) => onBackgroundChange({ padding: Number(e.target.value) })}
           />
         </div>
 
@@ -247,12 +227,7 @@ export function SettingsPanel({
             min={0}
             max={80}
             value={background.borderRadius}
-            onChange={(e) =>
-              onBackgroundChange({
-                ...background,
-                borderRadius: Number(e.target.value),
-              })
-            }
+            onChange={(e) => onBackgroundChange({ borderRadius: Number(e.target.value) })}
           />
         </div>
 
@@ -260,9 +235,7 @@ export function SettingsPanel({
           <label>Drop Shadow</label>
           <button
             className={`toggle ${background.shadow ? 'toggle--on' : ''}`}
-            onClick={() =>
-              onBackgroundChange({ ...background, shadow: !background.shadow })
-            }
+            onClick={() => onBackgroundChange({ shadow: !background.shadow })}
             aria-pressed={background.shadow}
             aria-label="Toggle drop shadow"
           />
@@ -273,46 +246,25 @@ export function SettingsPanel({
         <h3 className="settings-section__title">Tool Settings</h3>
         <div className="color-row">
           <label>Color</label>
-          <input
-            type="color"
-            value={toolColor}
-            onChange={(e) => onToolColorChange(e.target.value)}
-          />
+          <input type="color" value={toolColor} onChange={(e) => onToolColorChange(e.target.value)} />
         </div>
         <div className="slider-group">
           <div className="slider-group__header">
             <span className="slider-group__label">Stroke Width</span>
             <span className="slider-group__value">{strokeWidth}px</span>
           </div>
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={strokeWidth}
-            onChange={(e) => onStrokeWidthChange(Number(e.target.value))}
-          />
+          <input type="range" min={1} max={20} value={strokeWidth} onChange={(e) => onStrokeWidthChange(Number(e.target.value))} />
         </div>
         <div className="slider-group">
           <div className="slider-group__header">
             <span className="slider-group__label">Font Size</span>
             <span className="slider-group__value">{fontSize}px</span>
           </div>
-          <input
-            type="range"
-            min={12}
-            max={120}
-            value={fontSize}
-            onChange={(e) => onFontSizeChange(Number(e.target.value))}
-          />
+          <input type="range" min={12} max={120} value={fontSize} onChange={(e) => onFontSizeChange(Number(e.target.value))} />
         </div>
         <div className="toggle-row">
           <label>Fill Shape</label>
-          <button
-            className={`toggle ${filled ? 'toggle--on' : ''}`}
-            onClick={() => onFilledChange(!filled)}
-            aria-pressed={filled}
-            aria-label="Toggle shape fill"
-          />
+          <button className={`toggle ${filled ? 'toggle--on' : ''}`} onClick={() => onFilledChange(!filled)} aria-pressed={filled} aria-label="Toggle shape fill" />
         </div>
       </section>
 
@@ -321,45 +273,21 @@ export function SettingsPanel({
           <h3 className="settings-section__title">Selected Object</h3>
           <div className="color-row">
             <label>Color</label>
-            <input
-              type="color"
-              value={selectedAnnotation.color}
-              onChange={(e) =>
-                onAnnotationChange(selectedAnnotation.id, { color: e.target.value })
-              }
-            />
+            <input type="color" value={selectedAnnotation.color} onChange={(e) => onAnnotationChange(selectedAnnotation.id, { color: e.target.value })} />
           </div>
           {selectedAnnotation.type === 'text' && (
             <div className="input-group">
               <label>Text</label>
-              <input
-                type="text"
-                value={selectedAnnotation.text ?? ''}
-                onChange={(e) =>
-                  onAnnotationChange(selectedAnnotation.id, { text: e.target.value })
-                }
-              />
+              <input type="text" value={selectedAnnotation.text ?? ''} onChange={(e) => onAnnotationChange(selectedAnnotation.id, { text: e.target.value })} />
             </div>
           )}
           {selectedAnnotation.type === 'blur' && (
             <div className="slider-group">
               <div className="slider-group__header">
-                <span className="slider-group__label">Blur Radius</span>
-                <span className="slider-group__value">
-                  {selectedAnnotation.blurRadius ?? 16}px
-                </span>
+                <span className="slider-group__label">Blur Strength</span>
+                <span className="slider-group__value">{selectedAnnotation.blurRadius ?? 24}px</span>
               </div>
-              <input
-                type="range"
-                min={4}
-                max={40}
-                value={selectedAnnotation.blurRadius ?? 16}
-                onChange={(e) =>
-                  onAnnotationChange(selectedAnnotation.id, {
-                    blurRadius: Number(e.target.value),
-                  })
-                }
-              />
+              <input type="range" min={8} max={48} value={selectedAnnotation.blurRadius ?? 24} onChange={(e) => onAnnotationChange(selectedAnnotation.id, { blurRadius: Number(e.target.value) })} />
             </div>
           )}
         </section>
