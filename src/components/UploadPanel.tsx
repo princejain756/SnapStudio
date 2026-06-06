@@ -53,7 +53,7 @@ export function UploadPanel({ onFileSelect }: UploadPanelProps) {
           <ImagePlus />
         </div>
         <h2>Drop your image here</h2>
-        <p>or click to browse your files</p>
+        <p>or click to browse · paste with Ctrl+V</p>
         <div className="upload-formats">
           <span className="format-tag">PNG</span>
           <span className="format-tag">JPEG</span>

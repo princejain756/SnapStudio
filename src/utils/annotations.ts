@@ -1,4 +1,4 @@
-import type { Annotation } from '../types'
+import type { Annotation, Tool } from '../types'
 
 export function getAnnotationBounds(annotation: Annotation): {
   x: number
@@ -62,4 +62,31 @@ export function isPointInAnnotation(
 
 export function generateAnnotationId(): string {
   return `ann-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+export function normalizeRect(annotation: Annotation): {
+  x: number
+  y: number
+  width: number
+  height: number
+} {
+  const w = annotation.width ?? 0
+  const h = annotation.height ?? 0
+  return {
+    x: w < 0 ? annotation.x + w : annotation.x,
+    y: h < 0 ? annotation.y + h : annotation.y,
+    width: Math.abs(w),
+    height: Math.abs(h),
+  }
+}
+
+export const TOOL_DEFAULT_COLORS: Partial<Record<Tool, string>> = {
+  crop: '#22d3ee',
+  text: '#ffffff',
+  arrow: '#ef4444',
+  line: '#ef4444',
+  rectangle: '#ef4444',
+  circle: '#ef4444',
+  highlight: '#facc15',
+  blur: '#3b82f6',
 }
